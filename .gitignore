@@ -1,0 +1,7 @@
+!.gitignore
+.idea/
+.classpath
+.project
+.DS_Store
+.settings/
+.svn
