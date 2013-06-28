@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
 use warnings;
@@ -68,9 +68,11 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	my ($org_basename, $org_dir, $ext) = fileparse($file_path, qr/\.[^.]*/);
 	my $fmgr = MT::FileMgr->new('Local') or die MT::FileMgr->errstr;
 	my $file_name = sprintf("%d_%d_%d%s", $entry->id, $now, $i, $ext);
-	my $root_path = $blog->site_path;
-	my $root_url = $blog->site_url;
-	my $relative_dir = "archives/".sprintf("%04d\/%02d\/%02d",($t[5]+1900),($t[4]+1),($t[3]))."/";
+#	my $root_path = $blog->site_path;
+	my $root_path = '%r/';
+#	my $root_url = $blog->site_url;
+	my $root_url = '%r/';
+	my $relative_dir = "assets/".sprintf("%04d\/%02d",($t[5]+1900),($t[4]+1))."/";
 	my $relative_file_path = $relative_dir.$file_name;
 	my $new_file_path = File::Spec->catfile($root_path, $relative_file_path);
 	my $dir = dirname($new_file_path);
