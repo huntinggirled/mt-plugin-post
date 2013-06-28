@@ -59,6 +59,8 @@ $entry->blog_id($blog->id);
 $entry->author_id($author->id);
 $entry->status($blog->status_default);
 #$entry->status(MT->model('entry')->HOLD());
+$entry->allow_comments($blog->allow_comments_default);
+$entry->allow_pings($blog->allow_pings_default);
 $entry->title($title);
 $entry->text($text);
 $entry->save or die "entry save error.";
