@@ -1,11 +1,11 @@
 #!/usr/bin/perl
 
-use strict;
-use warnings;
+#use strict;
+#use warnings;
 use utf8;
 
-use lib './lib';
-use lib './extlib';
+use lib 'lib';
+use lib 'extlib';
 
 use MT::Blog;
 use MT::Entry;
@@ -32,6 +32,7 @@ my $title = $q->param("title") or die "load title error.";
 my $textbuf = $q->param("text") or die "load text error.";
 my ($text, $instadata) = split(/\[instadata\]/, $textbuf);
 my @a_file_path = $q->param("filepath");
+my $status= $q->param("status");
 
 my $blog   = MT::Blog->load($blog_id) or die "load blog error.";
 my $author = MT::Author->load($author_id) or die "load author error.";
@@ -57,8 +58,13 @@ utf8::decode($instadata) unless utf8::is_utf8($instadata);
 
 $entry->blog_id($blog->id);
 $entry->author_id($author->id);
-$entry->status($blog->status_default);
-#$entry->status(MT->model('entry')->HOLD());
+if($status =~ m/^hold/i) {
+	$entry->status(MT->model('entry')->HOLD());
+} elsif($status =~ m/^release/i) {
+	$entry->status(MT->model('entry')->RELEASE());
+} else {
+	$entry->status($blog->status_default);
+}
 $entry->allow_comments($blog->allow_comments_default);
 $entry->allow_pings($blog->allow_pings_default);
 $entry->title($title);
@@ -70,20 +76,16 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	my ($org_basename, $org_dir, $ext) = fileparse($file_path, qr/\.[^.]*/);
 	my $fmgr = MT::FileMgr->new('Local') or die MT::FileMgr->errstr;
 	my $file_name = sprintf("%d_%d_%d%s", $entry->id, $now, $i, $ext);
-#	my $root_path = $blog->site_path;
+	my $absolute_root_path = $blog->site_path;
 	my $root_path = '%r/';
-#	my $root_url = $blog->site_url;
 	my $root_url = '%r/';
 	my $relative_dir = "assets/".sprintf("%04d\/%02d",($t[5]+1900),($t[4]+1))."/";
 	my $relative_file_path = $relative_dir.$file_name;
-	my $new_file_path = File::Spec->catfile($root_path, $relative_file_path);
+	my $new_file_path = File::Spec->catfile($absolute_root_path, $relative_file_path);
 	my $dir = dirname($new_file_path);
 	unless($fmgr->exists($dir)) {
 		$fmgr->mkpath($dir) or die "dir make error.";
 	}
-	my $file_url = $root_url;
-	$file_url .= '/' if $file_url !~ m!/$!;
-	$file_url .= $relative_file_path;
 	$fmgr->put($file_path, $new_file_path, 'upload') or die $fmgr->errstr;
 	my $asset;
 	my $ext_type = $ext;
@@ -92,13 +94,13 @@ for (my $i=0; $i<@a_file_path; $i++) {
 		my($width, $height) = imgsize($new_file_path);
 		$asset = MT->model('image')->new;
 		$asset->label($title);
-		$asset->file_path($new_file_path);
+		$asset->file_path($root_path.$relative_file_path);
 		$asset->file_name($file_name);
 		$asset->file_ext($ext_type);
 		$asset->blog_id($blog->id);
 		$asset->created_by($author->id);
 		$asset->modified_by($author->id);
-		$asset->url($file_url);
+		$asset->url($root_url.$relative_file_path);
 		$asset->description($instadata);
 		$asset->image_width($width);
 		$asset->image_height($height);
@@ -106,14 +108,14 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	} elsif($ext_type =~ m/mp4|3gp|3g2/) {
 		$asset = MT->model('video')->new;
 		$asset->label($title);
-		$asset->file_path($new_file_path);
+		$asset->file_path($root_path.$relative_file_path);
 		$asset->file_name($file_name);
 		$asset->file_ext($ext_type);
 		$asset->mime_type($mime_type_hash{$ext_type});
 		$asset->blog_id($blog->id);
 		$asset->created_by($author->id);
 		$asset->modified_by($author->id);
-		$asset->url($file_url);
+		$asset->url($root_url.$relative_file_path);
 		$asset->description($instadata);
 		$asset->save or die "asset save error.";
 	}
@@ -125,20 +127,22 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	$obj_asset->save;
 	_save_log("'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。", $blog_id, $author_id);
 }
-$publisher->rebuild_entry(
-	Entry => $entry,
-	Blog => $blog,
-	BuildDependencies => 1,
-) or die "entry rebuild error.";
-#_save_log("エントリーを再構築しました。".$title, $blog_id, $author_id);
-MT->run_callbacks( 'scheduled_post_published', MT->instance, $entry, MT->model( 'entry' )->new);
+unless($status =~ m/^hold/i) {
+	$publisher->rebuild_entry(
+		Entry => $entry,
+		Blog => $blog,
+		BuildDependencies => 1,
+	) or die "entry rebuild error.";
+	_save_log("エントリーを再構築しました。".$title, $blog_id, $author_id);
+	MT->run_callbacks( 'scheduled_post_published', MT->instance, $entry, MT->model( 'entry' )->new);
+}
 print 'OK '.$entry->id;
 
 sub _save_log {
 	my ($error_mess,$blog_id,$author_id) = @_;
 	use MT::Log; 
 	my $log = MT::Log->new;
-	$error_mess = '[post.cgi]' . '' . $error_mess;
+	$error_mess = 'post.cgi:' . '' . $error_mess;
 	$log->blog_id($blog_id);
 	$log->author_id($author_id) if defined $author_id;
 	$log->message($error_mess);
