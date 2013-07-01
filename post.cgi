@@ -32,7 +32,7 @@ my $title = $q->param("title") or die "load title error.";
 my $textbuf = $q->param("text") or die "load text error.";
 my ($text, $instadata) = split(/\[instadata\]/, $textbuf);
 my @a_file_path = $q->param("filepath");
-my $status= $q->param("status");
+my $status = $q->param("status");
 
 my $blog   = MT::Blog->load($blog_id) or die "load blog error.";
 my $author = MT::Author->load($author_id) or die "load author error.";
