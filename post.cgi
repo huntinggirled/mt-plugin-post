@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-#use strict;
-#use warnings;
+use strict;
+use warnings;
 use utf8;
 
 use lib 'lib';
@@ -73,8 +73,7 @@ $entry->save or die "entry save error.";
 #_save_log("'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。", $blog_id, $author_id);
 MT->log({
     message => "'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。",
-    metadata => $entry->id,
-    class => 'MT::Log::Entry'
+    metadata => "エントリーID: ".$entry->id." タイトル: ".$title,
 });
 for (my $i=0; $i<@a_file_path; $i++) {
 	my $file_path = $a_file_path[$i];
@@ -132,10 +131,9 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	$obj_asset->save;
 	#_save_log("'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。", $blog_id, $author_id);
 	MT->log({
-        message => "'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。",
-        metadata => $entry->id,
-        class => 'MT::Log::Entry'
-    });
+		message => "'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。",
+		metadata => "アイテムID: ".$asset->id." ファイル名: ".$file_name,
+	});
 }
 unless($status =~ m/^hold/i) {
 	$publisher->rebuild_entry(
@@ -145,10 +143,9 @@ unless($status =~ m/^hold/i) {
 	) or die "entry rebuild error.";
 	#_save_log("エントリーを再構築しました。".$title, $blog_id, $author_id);
 	MT->log({
-        message => "エントリーを再構築しました。".$title,
-        metadata => $entry->id,
-        class => 'MT::Log::Entry'
-    });
+		message => "エントリーを再構築しました。".$title,
+		metadata => "エントリーID: ".$entry->id." タイトル: ".$title,
+	});
 	MT->run_callbacks( 'scheduled_post_published', MT->instance, $entry, MT->model( 'entry' )->new);
 }
 print 'OK '.$entry->id;
