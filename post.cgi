@@ -70,7 +70,12 @@ $entry->allow_pings($blog->allow_pings_default);
 $entry->title($title);
 $entry->text($text);
 $entry->save or die "entry save error.";
-_save_log("'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。", $blog_id, $author_id);
+#_save_log("'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。", $blog_id, $author_id);
+MT->log({
+    message => "'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。",
+    metadata => $entry->id,
+    class => 'MT::Log::Entry'
+});
 for (my $i=0; $i<@a_file_path; $i++) {
 	my $file_path = $a_file_path[$i];
 	my ($org_basename, $org_dir, $ext) = fileparse($file_path, qr/\.[^.]*/);
@@ -125,7 +130,12 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	$obj_asset->object_ds('entry');
 	$obj_asset->object_id($entry->id);
 	$obj_asset->save;
-	_save_log("'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。", $blog_id, $author_id);
+	#_save_log("'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。", $blog_id, $author_id);
+	MT->log({
+        message => "'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。",
+        metadata => $entry->id,
+        class => 'MT::Log::Entry'
+    });
 }
 unless($status =~ m/^hold/i) {
 	$publisher->rebuild_entry(
@@ -133,20 +143,25 @@ unless($status =~ m/^hold/i) {
 		Blog => $blog,
 		BuildDependencies => 1,
 	) or die "entry rebuild error.";
-	_save_log("エントリーを再構築しました。".$title, $blog_id, $author_id);
+	#_save_log("エントリーを再構築しました。".$title, $blog_id, $author_id);
+	MT->log({
+        message => "エントリーを再構築しました。".$title,
+        metadata => $entry->id,
+        class => 'MT::Log::Entry'
+    });
 	MT->run_callbacks( 'scheduled_post_published', MT->instance, $entry, MT->model( 'entry' )->new);
 }
 print 'OK '.$entry->id;
 
-sub _save_log {
-	my ($error_mess,$blog_id,$author_id) = @_;
-	use MT::Log; 
-	my $log = MT::Log->new;
-	$error_mess = 'post.cgi:' . '' . $error_mess;
-	$log->blog_id($blog_id);
-	$log->author_id($author_id) if defined $author_id;
-	$log->message($error_mess);
-	$log->level(MT::Log::ERROR);
-	$log->save or die $log->errstr;
-	return;
-}
+# sub _save_log {
+# 	my ($error_mess,$blog_id,$author_id) = @_;
+# 	use MT::Log; 
+# 	my $log = MT::Log->new;
+# 	$error_mess = 'post.cgi:' . '' . $error_mess;
+# 	$log->blog_id($blog_id);
+# 	$log->author_id($author_id) if defined $author_id;
+# 	$log->message($error_mess);
+# 	$log->level(MT::Log::ERROR);
+# 	$log->save or die $log->errstr;
+# 	return;
+# }
