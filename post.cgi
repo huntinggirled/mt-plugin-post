@@ -28,14 +28,20 @@ print "Content-type: text/plain\n\n";
 
 my $blog_id = $q->param("blogid") or die "load blogid error.";
 my $author_id = $q->param("authorid") or die "load author error.";
+my $category_id = $q->param("categoryid");
 my $title = $q->param("title") or die "load title error.";
 my $textbuf = $q->param("text") or die "load text error.";
 my ($text, $instadata) = split(/\[instadata\]/, $textbuf);
 my @a_file_path = $q->param("filepath");
+my $category_id = $q->param("categoryid");
 my $status = $q->param("status");
 
 my $blog   = MT::Blog->load($blog_id) or die "load blog error.";
 my $author = MT::Author->load($author_id) or die "load author error.";
+my $category;
+if($category_id) {
+    $category = MT::Category->load($category_id) or die "load category error.";
+}
 my $entry  = MT->model('entry')->new or die "load entry error.";
 
 my $now = time;
@@ -64,6 +70,9 @@ if($status =~ m/^hold/i) {
 	$entry->status(MT->model('entry')->RELEASE());
 } else {
 	$entry->status($blog->status_default);
+}
+if($category_id) {
+    $entry->category_id($category->id);
 }
 $entry->allow_comments($blog->allow_comments_default);
 $entry->allow_pings($blog->allow_pings_default);
