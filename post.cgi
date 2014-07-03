@@ -33,15 +33,13 @@ my $title = $q->param("title") or die "load title error.";
 my $textbuf = $q->param("text") or die "load text error.";
 my ($text, $instadata) = split(/\[instadata\]/, $textbuf);
 my @a_file_path = $q->param("filepath");
-my $category_id = $q->param("categoryid");
 my $status = $q->param("status");
+unless($status) {
+	$status = "release";
+}
 
 my $blog   = MT::Blog->load($blog_id) or die "load blog error.";
 my $author = MT::Author->load($author_id) or die "load author error.";
-my $category;
-if($category_id) {
-    $category = MT::Category->load($category_id) or die "load category error.";
-}
 my $entry  = MT->model('entry')->new or die "load entry error.";
 
 my $now = time;
@@ -71,9 +69,6 @@ if($status =~ m/^hold/i) {
 } else {
 	$entry->status($blog->status_default);
 }
-if($category_id) {
-    $entry->category_id($category->id);
-}
 $entry->allow_comments($blog->allow_comments_default);
 $entry->allow_pings($blog->allow_pings_default);
 $entry->title($title);
@@ -84,6 +79,19 @@ MT->log({
     message => "'".$author->name."'がブログ記事「".$title."」(ID:".$entry->id.")を追加しました。",
     metadata => "エントリーID: ".$entry->id." タイトル: ".$title,
 });
+if($category_id) {
+	#シングルカテゴリーのみにしか対応してません。。
+	use MT::Placement;
+	my $place = MT::Placement->new;
+	$place->entry_id($entry->id);
+	$place->blog_id($blog_id);
+	$place->category_id($category_id);
+	#$is_primary = $category_count == $count ? 1 : 0;
+	#$is_primary = 1 if $class_type eq 'page'; # for folder
+	my $is_primary = 1;
+	$place->is_primary($is_primary);
+	$place->save or die "place save error.";
+}
 for (my $i=0; $i<@a_file_path; $i++) {
 	my $file_path = $a_file_path[$i];
 	my ($org_basename, $org_dir, $ext) = fileparse($file_path, qr/\.[^.]*/);
@@ -137,7 +145,7 @@ for (my $i=0; $i<@a_file_path; $i++) {
 	$obj_asset->asset_id($asset->id);
 	$obj_asset->object_ds('entry');
 	$obj_asset->object_id($entry->id);
-	$obj_asset->save;
+	$obj_asset->save or die "objectasset save error.";
 	#_save_log("'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。", $blog_id, $author_id);
 	MT->log({
 		message => "'".$author->name."'がファイル'".$file_name."'(ID:".$asset->id.")を追加しました。",
